@@ -1,45 +1,34 @@
-# Import python packages
 import streamlit as st
 from snowflake.snowpark.functions import col
-# Write directly to the app
-st.title('My Parents New Healthy Diner')
-st.write(
-  """Choose the fruits you want in your custom Smoothie!.
-  """
-)
 
-#option = st.selectbox('What is your favorite fruit?',('Banana','strawberries', 'Peaches'))
-#st.write ('Your favorite fruit is:', option)
-import streamlit as st
-name_on_order =st.text_input('Name on smoothie')
-st.write('The name on your smoothie will bes',name_on_order)
-cnx=st.connection ("snowflake")
+st.title(":cup_with_straw: Customize Your Smoothie :cup_with_straw:")
+st.write("Choose the fruits you want in your custom Smoothie!")
+
+name_on_order = st.text_input('Name on smoothie')
+st.write('The name on your smoothie will be:', name_on_order)
+
+cnx = st.connection("snowflake")
 session = cnx.session()
-my_dataframe = session.table("smoothies.public.fruit_options").select (col('FRUIT_NAME'))
-#st.dataframe(data=my_dataframe, use_container_width=True)
-ingredients_list =st.multiselect(
-    'Choose up to 5 ingredients:'
-    , my_dataframe,
+
+# Convertir a pandas para que el multiselect funcione fuera de Snowflake
+fruits = session.table("smoothies.public.fruit_options").select(col('FRUIT_NAME')).to_pandas()
+
+ingredients_list = st.multiselect(
+    'Choose up to 5 ingredients:',
+    fruits['FRUIT_NAME'].tolist(),
     max_selections=5
 )
+
 if ingredients_list:
-   #st.write(ingredients_list)
-   #st.text(ingredients_list)
-   ingredients_string=''
-   for fruit_chosen in ingredients_list:
-      ingredients_string += fruit_chosen + ' '
-   st.write(ingredients_string)
- 
-   my_insert_stmt = """ insert into smoothies.public.orders(ingredients, name_on_order)
-                    values ('""" + ingredients_string + """','"""+ name_on_order+"""')"""
-   time_to_insert =st.button('submit order ')
-   if time_to_insert:
-       session.sql(my_insert_stmt).collect()
-       st.success('Your Smoothie is ordered!', icon="✅")
- #  st.write(my_insert_stmt)
-   #if ingredients_string:
-    #session.sql(my_insert_stmt).collect()
-    #st.success('Your Smoothie is ordered!', icon="✅")
-   
+    ingredients_string = ' '.join(ingredients_list)
+    st.write(ingredients_string)
+
+    if st.button('Submit order'):
+        # Parámetros (?) en lugar de concatenar texto, para evitar errores con comillas
+        session.sql(
+            "insert into smoothies.public.orders(ingredients, name_on_order) values (?, ?)",
+            params=[ingredients_string, name_on_order]
+        ).collect()
+        st.success('Your Smoothie is ordered!', icon="✅")
 else:
-    st.write('you have not chosen anything yet')
+    st.write('You have not chosen anything yet')
