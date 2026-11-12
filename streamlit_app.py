@@ -1,4 +1,5 @@
 import streamlit as st
+import requests  
 from snowflake.snowpark.functions import col
 from cryptography.hazmat.primitives import serialization
 cfg = dict(st.secrets["connections"]["snowflake"])
@@ -26,8 +27,13 @@ ingredients_list = st.multiselect(
 )
 
 if ingredients_list:
-    ingredients_string = ' '.join(ingredients_list)
-    st.write(ingredients_string)
+    ingredients_string = ' '
+    for fruit_chosen in ingredients_list:
+        ingredients_string += fruit_chosen +''
+        st.subheader(fruit_chosen + 'Nutrition information')
+        smoothiefroot_response = requests.get("https://my.smoothiefroot.com/api/fruit/" + fruit_chosen)  
+        sf_df=st.dataframe(data=smoothiefroot_response.json(),use_container_width=True)
+        
 
     if st.button('Submit order'):
         # Parámetros (?) en lugar de concatenar texto, para evitar errores con comillas
@@ -38,7 +44,5 @@ if ingredients_list:
         st.success('Your Smoothie is ordered!', icon="✅")
 else:
     st.write('You have not chosen anything yet')
-import requests  
-smoothiefroot_response = requests.get("https://my.smoothiefroot.com/api/fruit/watermelon")  
-st.text(smoothiefroot_response.json())
-sf_df=st.dataframe(data=smoothiefroot_response.json(),use_container_width=True)
+
+
